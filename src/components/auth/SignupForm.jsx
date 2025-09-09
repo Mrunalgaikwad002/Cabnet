@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiRequest, generateClientClerkId } from '../../lib/api';
 
 export default function SignupForm() {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'user' });
@@ -19,18 +20,46 @@ export default function SignupForm() {
     setError('');
 
     try {
+      const clerkId = generateClientClerkId();
+      const payload = {
+        clerkId,
+        email: formData.email,
+        firstName: formData.name,
+        lastName: '',
+        phoneNumber: '',
+      };
+      const endpoint = formData.role === 'driver' ? '/api/auth/signup/driver' : '/api/auth/signup/user';
+      const driverExtras = formData.role === 'driver' ? { licenseNumber: '', vehicleInfo: {} } : {};
+      const { token } = await apiRequest(endpoint, { method: 'POST', body: JSON.stringify({ ...payload, ...driverExtras }) });
+
       if (typeof window !== 'undefined') {
+        // Persist role mapping
         const rolesMapRaw = localStorage.getItem('rolesByEmail');
         const rolesMap = rolesMapRaw ? JSON.parse(rolesMapRaw) : {};
         rolesMap[formData.email.toLowerCase()] = formData.role;
         localStorage.setItem('rolesByEmail', JSON.stringify(rolesMap));
-        sessionStorage.setItem('role', formData.role);
+
+        // Persist clerkId mapping
+        const idsMapRaw = localStorage.getItem('clerkIdByEmail');
+        const idsMap = idsMapRaw ? JSON.parse(idsMapRaw) : {};
+        idsMap[formData.email.toLowerCase()] = clerkId;
+        localStorage.setItem('clerkIdByEmail', JSON.stringify(idsMap));
+
+        // Persist display name mapping
+        const namesMapRaw = localStorage.getItem('displayNameByEmail');
+        const namesMap = namesMapRaw ? JSON.parse(namesMapRaw) : {};
+        namesMap[formData.email.toLowerCase()] = formData.name;
+        localStorage.setItem('displayNameByEmail', JSON.stringify(namesMap));
+
+        // Set current session values
+        localStorage.setItem('authToken', token);
         localStorage.setItem('role', formData.role);
+        localStorage.setItem('currentEmail', formData.email.toLowerCase());
+        localStorage.setItem('displayName', formData.name);
+        sessionStorage.setItem('role', formData.role);
       }
-      setTimeout(() => {
-        setLoading(false);
-        router.push(`/${formData.role}/dashboard`);
-      }, 600);
+      setLoading(false);
+      router.push(`/${formData.role}/dashboard`);
     } catch (err) {
       setError('Signup failed. Please try again.');
       setLoading(false);

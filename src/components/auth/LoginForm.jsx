@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiRequest } from '../../lib/api';
 
 export default function LoginForm() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -22,26 +23,55 @@ export default function LoginForm() {
 
     try {
       let resolvedRole = 'user';
+      let clerkId = null;
+      let displayName = '';
+      let emailKey = formData.email.toLowerCase();
       if (typeof window !== 'undefined') {
         const rolesMapRaw = localStorage.getItem('rolesByEmail');
         const rolesMap = rolesMapRaw ? JSON.parse(rolesMapRaw) : {};
-        const mapped = rolesMap[formData.email.toLowerCase()];
+        const idsMapRaw = localStorage.getItem('clerkIdByEmail');
+        const idsMap = idsMapRaw ? JSON.parse(idsMapRaw) : {};
+        const namesMapRaw = localStorage.getItem('displayNameByEmail');
+        const namesMap = namesMapRaw ? JSON.parse(namesMapRaw) : {};
+
+        const mapped = rolesMap[emailKey];
+        clerkId = idsMap[emailKey] || null;
+        displayName = namesMap[emailKey] || '';
+        if (!displayName) {
+          // Derive from email local-part e.g. jack@example.com -> Jack
+          const local = emailKey.split('@')[0];
+          displayName = local ? local.charAt(0).toUpperCase() + local.slice(1) : 'User';
+          namesMap[emailKey] = displayName;
+          localStorage.setItem('displayNameByEmail', JSON.stringify(namesMap));
+        }
         if (mapped === 'driver' || mapped === 'user') {
           resolvedRole = mapped;
         } else {
-          // no mapping found — require role selection
           setNeedsRole(true);
-          resolvedRole = role; // use currently selected radio
-          rolesMap[formData.email.toLowerCase()] = resolvedRole;
+          resolvedRole = role;
+          rolesMap[emailKey] = resolvedRole;
           localStorage.setItem('rolesByEmail', JSON.stringify(rolesMap));
         }
-        sessionStorage.setItem('role', resolvedRole);
-        localStorage.setItem('role', resolvedRole);
       }
-      setTimeout(() => {
-        setLoading(false);
-        router.push(`/${resolvedRole}/dashboard`);
-      }, 500);
+
+      if (!clerkId) {
+        throw new Error('Account not found. Please sign up first.');
+      }
+
+      const { token } = await apiRequest('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ clerkId })
+      });
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('role', resolvedRole);
+        localStorage.setItem('currentEmail', emailKey);
+        if (displayName) localStorage.setItem('displayName', displayName);
+      }
+
+      setLoading(false);
+      router.push(`/${resolvedRole}/dashboard`);
     } catch (err) {
       setError('Login failed. Please try again.');
       setLoading(false);

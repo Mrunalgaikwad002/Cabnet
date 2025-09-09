@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
 
 :root {
   --background: #ffffff;
@@ -12,10 +13,11 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Force light theme across app */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #ffffff;
+    --foreground: #171717;
   }
 }
 
@@ -26,3 +28,9 @@ body {
 }
 
 html { scroll-behavior: smooth; }
+
+/* Hard override to ensure white background regardless of OS theme */
+html, body {
+  background-color: #ffffff !important;
+  color: #171717 !important;
+}
