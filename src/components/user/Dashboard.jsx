@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import LiveTracking from './tracking/LiveTracking';
+import PaymentsPanel from './payments/PaymentsPanel';
+import ProfilePanel from './profile/ProfilePanel';
+import { RideHistoryList, RideHistoryDetail } from './history';
 import BookingForm from './booking/BookingForm';
 import PaymentToast from './notifications/PaymentToast';
 
@@ -12,15 +15,23 @@ export default function UserDashboard() {
   const [greeting, setGreeting] = useState('Welcome');
   const [unread, setUnread] = useState(3);
   const [showNotif, setShowNotif] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const [activeNav, setActiveNav] = useState('home');
   const [paymentStatus, setPaymentStatus] = useState(null);
   const [activeRide, setActiveRide] = useState(null);
   const [rideToast, setRideToast] = useState(null);
+  const [email, setEmail] = useState('');
+  const [rides, setRides] = useState([
+    { id: 'r1', pickup: 'Pune', drop: 'Mumbai', date: '2025-09-01 10:20', duration: '2h 45m', vehicle: 'Sedan', fare: 450, payment: 'Cash', status: 'Completed', route: [[18.52,73.85],[18.6,73.9],[18.9,73.95]], driver: { name: 'Rahul', rating: 4.9, plate: 'MH12 AB 1234' }, invoice: { base: 100, distance: 320, tax: 50, discount: 20 } },
+  ]);
+  const [selectedRide, setSelectedRide] = useState(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const name = localStorage.getItem('displayName');
       setDisplayName(name || 'User');
+      const em = localStorage.getItem('currentEmail');
+      setEmail(em || '');
     }
     const hour = new Date().getHours();
     const g = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -47,8 +58,6 @@ export default function UserDashboard() {
     { key: 'history', label: 'Ride history' },
     { key: 'payments', label: 'Payments' },
     { key: 'profile', label: 'Profile' },
-    { key: 'reviews', label: 'Ratings & reviews' },
-    { key: 'support', label: 'Support' },
   ];
 
   const renderContent = () => {
@@ -71,37 +80,36 @@ export default function UserDashboard() {
         return (
           <section className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="text-xl font-semibold text-gray-900">📜 Ride history</div>
-            <div className="mt-2 text-sm text-gray-700">Recent rides will appear here.</div>
+            <div className="mt-4">
+              {!selectedRide ? (
+                <RideHistoryList rides={rides} onSelect={(r)=>setSelectedRide(r)} />
+              ) : (
+                <RideHistoryDetail ride={selectedRide} onClose={()=>setSelectedRide(null)} onSubmitReview={({ rideId, rating, text }) => {
+                  // For now, just log; later can send to backend
+                  console.log('review', { rideId, rating, text });
+                  setSelectedRide(null);
+                }} />
+              )}
+            </div>
           </section>
         );
       case 'payments':
         return (
           <section className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="text-xl font-semibold text-gray-900">💳 Payments</div>
-            <div className="mt-2 text-sm text-gray-700">Balance: — · Last transaction: —</div>
+            <div className="mt-4">
+              <PaymentsPanel />
+            </div>
           </section>
         );
       case 'profile':
         return (
           <section className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="text-xl font-semibold text-gray-900">👤 Profile</div>
-            <div className="mt-2 text-sm text-gray-700">Profile management coming soon.</div>
+            <div className="mt-4"><ProfilePanel /></div>
           </section>
         );
-      case 'reviews':
-        return (
-          <section className="rounded-2xl bg-white p-6 shadow-sm">
-            <div className="text-xl font-semibold text-gray-900">✨ Ratings & reviews</div>
-            <div className="mt-2 text-sm text-gray-700">No pending ratings.</div>
-          </section>
-        );
-      case 'support':
-        return (
-          <section className="rounded-2xl bg-white p-6 shadow-sm">
-            <div className="text-xl font-semibold text-gray-900">🛟 Support</div>
-            <div className="mt-2 text-sm text-gray-700">Help center coming soon.</div>
-          </section>
-        );
+      
       case 'home':
       default:
         return (
@@ -205,11 +213,7 @@ export default function UserDashboard() {
           <button onClick={() => setOpen(!open)} aria-label={open ? 'Close sidebar' : 'Open sidebar'} className="absolute -right-5 top-4 z-30 rounded-full bg-white shadow-md border border-gray-200 p-1">
             <Image src="/sidebar-toggle.svg" alt="Toggle sidebar" width={28} height={28} />
           </button>
-          <div className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#113A4A] font-bold text-lg">C</span>
-            <span className="text-white text-2xl font-semibold tracking-tight">CabNet</span>
-          </div>
-          <div className="mt-1 text-base text-white/80">User Dashboard</div>
+          <div className="text-white text-base">User Dashboard</div>
           <ul className="mt-5 space-y-1 text-base">
             {items.map((s) => (
               <li key={s.key}>
@@ -251,7 +255,24 @@ export default function UserDashboard() {
                 </div>
               )}
               <span className="text-sm text-gray-700">{greeting}, {displayName}</span>
-              <div className="h-9 w-9 rounded-full bg-gray-200" />
+              <button onClick={()=>setShowProfile((p)=>!p)} className="h-9 w-9 rounded-full overflow-hidden border border-gray-300">
+                <img src={`https://i.pravatar.cc/36?u=${encodeURIComponent(email || displayName || 'user')}`} alt="User" width={36} height={36} />
+              </button>
+              {showProfile && (
+                <div className="absolute right-0 top-12 w-64 rounded-xl border border-gray-200 bg-white shadow-md p-3 text-sm z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full overflow-hidden border border-gray-200">
+                      <img src={`https://i.pravatar.cc/40?u=${encodeURIComponent(email || displayName || 'user')}`} alt="User" width={40} height={40} />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-gray-900">{displayName || 'User'}</div>
+                      <div className="text-xs text-gray-600 break-all">{email || '—'}</div>
+                    </div>
+                  </div>
+                  <hr className="my-3 border-gray-200" />
+                  <button onClick={()=>{ if (typeof window !== 'undefined') { localStorage.clear(); sessionStorage.clear(); window.location.href = '/login'; } }} className="w-full text-left rounded-md bg-red-600 text-white px-3 py-2 text-sm font-medium hover:bg-red-700">Log out</button>
+                </div>
+              )}
             </div>
           </div>
         </div>

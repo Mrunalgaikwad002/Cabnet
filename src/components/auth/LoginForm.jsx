@@ -73,7 +73,8 @@ export default function LoginForm() {
       setLoading(false);
       router.push(`/${resolvedRole}/dashboard`);
     } catch (err) {
-      setError('Login failed. Please try again.');
+      const msg = err?.data?.message || err?.message || 'Login failed. Please try again.';
+      setError(msg);
       setLoading(false);
     }
   };

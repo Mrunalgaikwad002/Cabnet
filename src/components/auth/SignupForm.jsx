@@ -61,7 +61,7 @@ export default function SignupForm() {
       setLoading(false);
       router.push(`/${formData.role}/dashboard`);
     } catch (err) {
-      setError('Signup failed. Please try again.');
+      setError(err?.data?.message || err?.message || 'Signup failed. Please try again.');
       setLoading(false);
     }
   };
