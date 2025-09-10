@@ -60,6 +60,29 @@ export default function UserDashboard() {
     { key: 'profile', label: 'Profile' },
   ];
 
+  const handlePayNow = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/payments/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: 20000, // ₹200 in paise
+          currency: 'inr',
+          description: 'Ride payment'
+        })
+      });
+      
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Payment error: ' + (data.error || 'Unable to start payment'));
+      }
+    } catch (error) {
+      alert('Payment error: ' + error.message);
+    }
+  };
+
   const renderContent = () => {
     switch (activeNav) {
       case 'book':
@@ -73,7 +96,7 @@ export default function UserDashboard() {
         return (
           <section className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="text-xl font-semibold text-gray-900">🌍 Live tracking</div>
-            <div className="mt-4"><LiveTracking active={!!activeRide} ride={activeRide} /></div>
+            <div className="mt-4"><LiveTracking active={!!activeRide} ride={activeRide} onPayNow={handlePayNow} /></div>
           </section>
         );
       case 'history':
@@ -300,5 +323,6 @@ export default function UserDashboard() {
     </div>
   );
 }
+
 
 

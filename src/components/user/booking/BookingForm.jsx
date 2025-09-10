@@ -23,8 +23,9 @@ const MapClicker = dynamic(
 
 async function reverseGeocode(lat, lng) {
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
-    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    // Use a CORS proxy to avoid CORS issues
+    const url = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)}`;
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Failed');
     const data = await res.json();
     return data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
@@ -91,39 +92,49 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
   const startFlow = () => {
     setFlowOpen(true);
     setFlowStep('summary');
+    
+    // Auto-progress through the flow
     setTimeout(() => {
       setFlowStep('search');
-      setTimeout(() => {
-        setFlowStep('assigned');
-        const p = pickupCoords || pickerPos;
-        setDriverPos([ (p?.[0] || 18.52) + 0.005, (p?.[1] || 73.85) - 0.006 ]);
-        // Update active ride status if parent provided a handler
-        if (onRideConfirmed) {
-          onRideConfirmed({ pickup, drop, status: 'Driver assigned' });
-          // Timed status updates for demo flow
-          setTimeout(() => {
-            onRideConfirmed({ pickup, drop, status: 'Arriving' });
-          }, 30000);
-          setTimeout(() => {
-            onRideConfirmed({ pickup, drop, status: 'Ride started' });
-          }, 90000);
-        }
-        if (onGoLive) onGoLive();
-      }, 2200);
-    }, 1000);
+    }, 2000);
+    
+    setTimeout(() => {
+      setFlowStep('assigned');
+      const p = pickupCoords || pickerPos;
+      setDriverPos([ (p?.[0] || 18.52) + 0.005, (p?.[1] || 73.85) - 0.006 ]);
+      // Update active ride status if parent provided a handler
+      if (onRideConfirmed) {
+        onRideConfirmed({ pickup, drop, status: 'Driver assigned' });
+      }
+      if (onGoLive) onGoLive();
+    }, 4000);
+    
     if (onRideToast) onRideToast();
   };
 
   const handleConfirm = () => {
-    if (!pickup || !drop) return;
-    startFlow();
-    if (onRideConfirmed) {
-      onRideConfirmed({ pickup, drop, status: 'Searching driver' });
+    if (!pickup || !drop) {
+      alert('Please enter both pickup and drop locations');
+      return;
     }
+    
+    // Start the flow with auto-progression
+    startFlow();
   };
 
   const useGps = () => {
-    if (typeof window === 'undefined' || !navigator.geolocation) return;
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      alert('Geolocation is not supported by this browser.');
+      return;
+    }
+
+    // Check if we're on HTTPS or localhost
+    const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+    if (!isSecure) {
+      alert('GPS location requires HTTPS. Please use the map picker instead.');
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
@@ -131,8 +142,32 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
         const name = await reverseGeocode(latitude, longitude);
         setPickup(name);
       },
-      () => alert('Unable to get location. Please allow location access.'),
-      { enableHighAccuracy: true, timeout: 8000 }
+      (err) => {
+        console.error('GPS error:', err);
+        let errorMessage = 'Unable to get location. ';
+        
+        switch(err.code) {
+          case err.PERMISSION_DENIED:
+            errorMessage += 'Please allow location access in your browser settings and try again.';
+            break;
+          case err.POSITION_UNAVAILABLE:
+            errorMessage += 'Location information is unavailable.';
+            break;
+          case err.TIMEOUT:
+            errorMessage += 'Location request timed out.';
+            break;
+          default:
+            errorMessage += 'An unknown error occurred.';
+            break;
+        }
+        
+        alert(errorMessage + '\n\nYou can use "Choose on map" instead.');
+      },
+      { 
+        enableHighAccuracy: true, 
+        timeout: 10000,
+        maximumAge: 300000
+      }
     );
   };
 
@@ -140,6 +175,9 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
   const handlePay = async () => {
     try {
       const amountPaise = Math.round((estimate?.fare || 0) * 100);
+      console.log('Starting payment with amount:', amountPaise);
+      console.log('API URL:', `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/payments/create-checkout-session`);
+      
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/payments/create-checkout-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -147,19 +185,24 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
           amount: amountPaise,
           currency: 'inr',
           description: 'CabNet Ride Fare',
-          // Request backend to configure Checkout with email first, payment method next,
-          // and require only billing address (no shipping address section)
           billingAddressCollection: 'required',
           shippingAddressCollection: 'none'
         })
       });
+      
+      console.log('Payment response status:', res.status);
       const data = await res.json();
+      console.log('Payment response data:', data);
+      
       if (data.url) {
+        console.log('Redirecting to Stripe:', data.url);
         window.location.href = data.url;
       } else {
+        console.error('Payment error:', data.error);
         alert(data.error || 'Unable to start payment');
       }
     } catch (e) {
+      console.error('Payment error:', e);
       alert('Payment error: ' + e.message);
     }
   };
@@ -167,6 +210,7 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5">
       <div className="text-base font-semibold text-gray-900">Book a ride</div>
+      
 
       <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
@@ -242,7 +286,13 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
               <div className="font-medium text-gray-900">Estimated fare</div>
               <div className="text-gray-700">{`${formatINR(estimate.fare)} · ETA ${estimate.eta} mins`}</div>
             </div>
-            <button disabled={!pickup || !drop} onClick={handleConfirm} className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-900 disabled:opacity-50">Confirm Ride</button>
+            <button 
+              disabled={!pickup || !drop} 
+              onClick={handleConfirm}
+              className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-900 disabled:opacity-50"
+            >
+              Confirm Ride
+            </button>
           </div>
         ) : (
           <div className="text-gray-700">Enter pickup and drop to see fare estimate and ETA.</div>
@@ -265,8 +315,8 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
 
       {/* Post-confirm flow modal */}
       {flowOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="w-full max-w-3xl rounded-2xl bg-white p-4 shadow-lg">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-lg">
             {flowStep === 'summary' && (
               <RideSummary
                 pickup={pickup}
@@ -274,33 +324,44 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
                 rideType={rideType}
                 payment={payment}
                 estimate={estimate}
-                onConfirm={() => setFlowStep('search')}
+                onConfirm={() => {
+                  setFlowStep('search');
+                  // Auto-progress to assigned after 5 seconds
+                  setTimeout(() => {
+                    setFlowStep('assigned');
+                    const p = pickupCoords || pickerPos;
+                    setDriverPos([ (p?.[0] || 18.52) + 0.005, (p?.[1] || 73.85) - 0.006 ]);
+                    if (onRideConfirmed) {
+                      onRideConfirmed({ pickup, drop, status: 'Driver assigned' });
+                    }
+                    if (onGoLive) onGoLive();
+                  }, 5000);
+                }}
               />
             )}
             {flowStep === 'search' && (
-              <div>
-                <div className="text-base font-semibold text-gray-900">Finding a driver nearby…</div>
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
+                <h3 className="text-xl font-semibold mb-2">Finding a driver nearby...</h3>
+                <p className="text-gray-600">Please wait while we connect you with the best available driver</p>
                 <div className="mt-3 h-60 w-full overflow-hidden rounded-lg">
                   <MapContainer center={pickupCoords || pickerPos} zoom={14} style={{ height: '100%', width: '100%' }}>
                     <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     {(pickupCoords || pickerPos) && <Marker position={pickupCoords || pickerPos} />}
                   </MapContainer>
                 </div>
-                <div className="mt-3 text-sm text-gray-700">Searching… this may take a few seconds.</div>
               </div>
             )}
             {flowStep === 'assigned' && (
               <AssignedView
-                pickupPos={pickupCoords || pickerPos}
-                driverPos={driverPos}
-                assignedDriver={assignedDriver}
+                driver={assignedDriver}
                 pickup={pickup}
                 drop={drop}
-                rideType={rideType}
-                estimate={estimate}
+                pickupCoords={pickupCoords || pickerPos}
+                driverPos={driverPos}
                 payment={payment}
-                onPayOnline={() => setPayment('online') || handlePay()}
-                onCash={() => setPayment('cash')}
+                onPaymentChange={setPayment}
+                onPay={handlePay}
                 onCancel={() => setFlowOpen(false)}
               />
             )}
@@ -313,5 +374,6 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
     </div>
   );
 }
+
 
 

@@ -30,4 +30,3 @@ export default function RideSummary({ pickup, drop, rideType, payment, estimate,
   );
 }
 
-

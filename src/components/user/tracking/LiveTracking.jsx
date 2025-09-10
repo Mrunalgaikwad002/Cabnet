@@ -5,13 +5,14 @@ import { LiveStatusBanner } from '.';
 import LiveMap from './LiveMap';
 import DriverInfoCard from './DriverInfoCard';
 
-export default function LiveTracking({ mode = 'full', active = true, ride }) {
+export default function LiveTracking({ mode = 'full', active = true, ride, onPayNow }) {
   const [driverPos, setDriverPos] = useState([18.524, 73.85]);
   const [pickupPos] = useState([18.52, 73.8567]);
   const [dropPos] = useState([18.53, 73.87]);
   const [statusText, setStatusText] = useState('Driver is arriving in 3 mins');
   const [userPos, setUserPos] = useState([18.5204, 73.8567]);
   const [geoReady, setGeoReady] = useState(mode !== 'preview');
+  const [isCompleted, setIsCompleted] = useState(false);
 
   // Geolocation for preview mode
   useEffect(() => {
@@ -34,7 +35,10 @@ export default function LiveTracking({ mode = 'full', active = true, ride }) {
     }, 1500);
     const t1 = setTimeout(() => setStatusText('Driver has arrived'), 12000);
     const t2 = setTimeout(() => setStatusText('Ride in progress'), 18000);
-    const t3 = setTimeout(() => setStatusText('Ride completed'), 30000);
+    const t3 = setTimeout(() => {
+      setStatusText('Ride completed');
+      setIsCompleted(true);
+    }, 30000);
     return () => { clearInterval(id); clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, []);
 
@@ -67,12 +71,14 @@ export default function LiveTracking({ mode = 'full', active = true, ride }) {
       </div>
       <DriverInfoCard
         driver={{ name: 'Rahul Sharma', rating: 4.9, car: 'Sedan', plate: 'MH12 AB 1234', photo: 'https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=128&h=128&fit=crop&crop=faces' }}
-        eta={'5 mins'}
-        distance={'2.3 km'}
+        eta={isCompleted ? 'Completed' : '5 mins'}
+        distance={isCompleted ? '0 km' : '2.3 km'}
         payment={'Cash'}
+        isCompleted={isCompleted}
         onCall={() => {}}
         onChat={() => {}}
         onCancel={() => {}}
+        onPayNow={onPayNow}
       />
     </div>
   );

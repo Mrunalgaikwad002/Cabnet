@@ -40,4 +40,3 @@ export default function MapPicker({ isOpen, pickerFor, pickerPos, setPickerPos, 
   );
 }
 
-
