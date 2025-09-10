@@ -22,8 +22,8 @@ export default function MapPicker({ isOpen, pickerFor, pickerPos, setPickerPos, 
       <div className="w-full max-w-3xl rounded-2xl bg-white p-4 shadow-lg">
         <div className="text-sm font-semibold text-gray-900">Choose on map ({pickerFor})</div>
         <div className="mt-2 h-80 w-full overflow-hidden rounded-lg">
-          <MapContainer center={pickerPos} zoom={13} style={{ height: '100%', width: '100%' }}>
-            <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <MapContainer attributionControl={false} center={pickerPos} zoom={13} style={{ height: '100%', width: '100%' }}>
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             <Marker position={pickerPos} />
             <MapClicker onClick={(pos)=>setPickerPos(pos)} />
           </MapContainer>

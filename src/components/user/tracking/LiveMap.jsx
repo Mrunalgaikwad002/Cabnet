@@ -24,8 +24,8 @@ export default function LiveMap({ driverPos, pickupPos, dropPos, route }) {
   }, [driverPos, pickupPos, dropPos]);
 
   return (
-    <MapContainer whenCreated={(m)=> (mapRef.current = m)} center={pickupPos || driverPos} zoom={13} style={{ height: '100%', width: '100%' }}>
-      <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+    <MapContainer attributionControl={false} whenCreated={(m)=> (mapRef.current = m)} center={pickupPos || driverPos} zoom={13} style={{ height: '100%', width: '100%' }}>
+      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       {pickupPos && <Marker position={pickupPos} />}
       {dropPos && <Marker position={dropPos} />}
       {driverPos && <Marker position={driverPos} />}
