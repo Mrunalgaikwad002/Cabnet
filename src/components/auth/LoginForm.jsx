@@ -54,14 +54,22 @@ export default function LoginForm() {
         }
       }
 
-      if (!clerkId) {
-        throw new Error('Account not found. Please sign up first.');
+      // Prefer backend login by email; fallback to clerkId lookup if needed
+      let token;
+      try {
+        const res = await apiRequest('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email: emailKey })
+        });
+        token = res.token;
+      } catch (e) {
+        if (!clerkId) throw e;
+        const res2 = await apiRequest('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ clerkId })
+        });
+        token = res2.token;
       }
-
-      const { token } = await apiRequest('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ clerkId })
-      });
 
       if (typeof window !== 'undefined') {
         localStorage.setItem('authToken', token);
@@ -107,7 +115,7 @@ export default function LoginForm() {
           <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">Remember me</label>
         </div>
         <div className="text-sm">
-          <a href="#" className="font-medium text-black hover:text-gray-700">Forgot password?</a>
+          <a href="/login/forgot-password" className="font-medium text-black hover:text-gray-700">Forgot password?</a>
         </div>
       </div>
 

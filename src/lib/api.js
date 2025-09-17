@@ -1,9 +1,11 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://cab-net-backend.vercel.app';
 
 export async function apiRequest(path, options = {}) {
   const url = `${API_BASE_URL}${path}`;
+  const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
   const headers = {
     'Content-Type': 'application/json',
+    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
     ...(options.headers || {}),
   };
   const res = await fetch(url, { ...options, headers, cache: 'no-store' });
@@ -13,6 +15,11 @@ export async function apiRequest(path, options = {}) {
     const error = new Error(message);
     error.status = res.status;
     error.data = data;
+    if (res.status === 401 && typeof window !== 'undefined') {
+      // Auto-logout on unauthorized
+      localStorage.removeItem('authToken');
+      // Keep role/email to help login UX
+    }
     throw error;
   }
   return data;

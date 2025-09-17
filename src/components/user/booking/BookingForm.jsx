@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { apiRequest } from '../../../lib/api';
 import dynamic from 'next/dynamic';
 import MapPicker from './MapPicker';
 import RideSummary from './RideSummary';
@@ -112,14 +113,43 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
     if (onRideToast) onRideToast();
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!pickup || !drop) {
       alert('Please enter both pickup and drop locations');
       return;
     }
-    
-    // Start the flow with auto-progression
-    startFlow();
+    try {
+      // Construct minimal payload matching backend schema
+      const payload = {
+        pickup: {
+          location: {
+            coordinates: pickupCoords || pickerPos,
+            address: pickup,
+            city: '',
+            state: '',
+            zipCode: ''
+          },
+          instructions: ''
+        },
+        dropoff: {
+          location: {
+            coordinates: dropCoords || pickerPos,
+            address: drop,
+            city: '',
+            state: '',
+            zipCode: ''
+          },
+          instructions: ''
+        },
+        rideType,
+        notes: ''
+      };
+      const { ride } = await apiRequest('/api/rides/request', { method: 'POST', body: JSON.stringify(payload) });
+      // Start the UI flow after backend confirms
+      startFlow();
+    } catch (e) {
+      alert(e?.data?.message || e?.message || 'Failed to request ride');
+    }
   };
 
   const useGps = () => {

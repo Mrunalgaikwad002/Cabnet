@@ -51,6 +51,12 @@ export default function SignupForm() {
         namesMap[formData.email.toLowerCase()] = formData.name;
         localStorage.setItem('displayNameByEmail', JSON.stringify(namesMap));
 
+        // Persist password mapping (demo-only)
+        const passMapRaw = localStorage.getItem('passwordByEmail');
+        const passMap = passMapRaw ? JSON.parse(passMapRaw) : {};
+        passMap[formData.email.toLowerCase()] = formData.password;
+        localStorage.setItem('passwordByEmail', JSON.stringify(passMap));
+
         // Set current session values
         localStorage.setItem('authToken', token);
         localStorage.setItem('role', formData.role);

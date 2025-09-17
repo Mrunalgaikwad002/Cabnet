@@ -1,33 +1,43 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { apiRequest } from '../../../lib/api';
 import RideRequestCard from './RideRequestCard';
 
 export default function LiveRideRequests({ onAccept }) {
-  const [requests, setRequests] = useState([
-    {
-      id: 1,
-      passengerName: 'Rahul Sharma',
-      pickup: 'Shivajinagar, Pune, Maharashtra',
-      drop: 'Viman Nagar, Pune, Maharashtra',
-      distance: '5.2 km',
-      estimatedFare: '₹180',
-      estimatedTime: '12 mins',
-      passengerRating: 4.8,
-      requestTime: '2 mins ago'
-    },
-    {
-      id: 2,
-      passengerName: 'Aisha Khan',
-      pickup: 'Andheri West, Mumbai, Maharashtra',
-      drop: 'Bandra Kurla Complex, Mumbai, Maharashtra',
-      distance: '3.8 km',
-      estimatedFare: '₹140',
-      estimatedTime: '8 mins',
-      passengerRating: 4.9,
-      requestTime: '5 mins ago'
-    }
-  ]);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchNearby = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const { drivers } = await apiRequest('/api/rides/drivers/nearby');
+        // Map drivers to request-like cards (until real queue exists)
+        const mapped = (drivers || []).map((d, idx) => ({
+          id: d.id || idx,
+          passengerName: 'Rider',
+          pickup: d.location_address || 'Nearby area',
+          drop: '—',
+          distance: '—',
+          estimatedFare: '—',
+          estimatedTime: '—',
+          passengerRating: d.rating_average || 4.8,
+          requestTime: 'now'
+        }));
+        if (!cancelled) setRequests(mapped);
+      } catch (e) {
+        if (!cancelled) setError(e?.data?.message || e?.message || 'Failed to load nearby requests');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    fetchNearby();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleAccept = (requestId) => {
     setRequests(requests.filter(req => req.id !== requestId));
@@ -50,7 +60,13 @@ export default function LiveRideRequests({ onAccept }) {
           </div>
         </div>
 
-        {requests.length === 0 ? (
+        {error && (
+          <div className="rounded-md bg-red-50 p-3 text-red-700 mb-3">{error}</div>
+        )}
+
+        {loading ? (
+          <div className="text-center py-12">Loading...</div>
+        ) : requests.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🚖</div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No active requests</h3>
