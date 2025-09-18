@@ -125,9 +125,9 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
           location: {
             coordinates: pickupCoords || pickerPos,
             address: pickup,
-            city: '',
-            state: '',
-            zipCode: ''
+            city: 'Pune',
+            state: 'Maharashtra',
+            zipCode: '411001'
           },
           instructions: ''
         },
@@ -135,9 +135,9 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
           location: {
             coordinates: dropCoords || pickerPos,
             address: drop,
-            city: '',
-            state: '',
-            zipCode: ''
+            city: 'Pune',
+            state: 'Maharashtra',
+            zipCode: '411001'
           },
           instructions: ''
         },
