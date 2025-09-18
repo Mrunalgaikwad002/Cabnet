@@ -119,6 +119,13 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
       return;
     }
     try {
+      // Check if user is authenticated
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        alert('Please login first');
+        return;
+      }
+      
       // Construct minimal payload matching backend schema
       const payload = {
         pickup: {
@@ -144,11 +151,15 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
         rideType,
         notes: ''
       };
+      console.log('Sending payload:', payload);
       const { ride } = await apiRequest('/api/rides/request', { method: 'POST', body: JSON.stringify(payload) });
+      console.log('Ride created:', ride);
       // Start the UI flow after backend confirms
       startFlow();
     } catch (e) {
-      alert(e?.data?.message || e?.message || 'Failed to request ride');
+      console.error('Ride request error:', e);
+      console.error('Error details:', e?.data);
+      alert(e?.data?.message || e?.data?.errors || e?.message || 'Failed to request ride');
     }
   };
 
