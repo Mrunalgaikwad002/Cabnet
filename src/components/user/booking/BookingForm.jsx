@@ -213,35 +213,23 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
   const handlePay = async () => {
     try {
       const amountPaise = Math.round((estimate?.fare || 0) * 100);
-      console.log('Starting payment with amount:', amountPaise);
-      console.log('API URL:', `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/payments/create-checkout-session`);
-      
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/payments/create-checkout-session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: amountPaise,
-          currency: 'inr',
-          description: 'CabNet Ride Fare',
-          billingAddressCollection: 'required',
-          shippingAddressCollection: 'none'
-        })
-      });
-      
-      console.log('Payment response status:', res.status);
-      const data = await res.json();
-      console.log('Payment response data:', data);
-      
+      const payload = {
+        amount: amountPaise,
+        currency: 'inr',
+        description: 'CabNet Ride Fare',
+        billingAddressCollection: 'required',
+        shippingAddressCollection: 'none',
+        successUrl: `${window.location.origin}/user/dashboard?payment=success`,
+        cancelUrl: `${window.location.origin}/user/dashboard?payment=cancel`
+      };
+      const data = await apiRequest('/api/payments/create-checkout-session', { method: 'POST', body: JSON.stringify(payload) });
       if (data.url) {
-        console.log('Redirecting to Stripe:', data.url);
         window.location.href = data.url;
       } else {
-        console.error('Payment error:', data.error);
         alert(data.error || 'Unable to start payment');
       }
     } catch (e) {
-      console.error('Payment error:', e);
-      alert('Payment error: ' + e.message);
+      alert('Payment error: ' + (e?.data?.error || e.message));
     }
   };
 
