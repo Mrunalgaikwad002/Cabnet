@@ -126,7 +126,7 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
         return;
       }
       
-      // Construct minimal payload matching backend schema
+      // Construct minimal payload matching backend schema (omit empty strings)
       const payload = {
         pickup: {
           location: {
@@ -135,8 +135,7 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
             city: 'Pune',
             state: 'Maharashtra',
             zipCode: '411001'
-          },
-          instructions: ''
+          }
         },
         dropoff: {
           location: {
@@ -145,11 +144,9 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
             city: 'Pune',
             state: 'Maharashtra',
             zipCode: '411001'
-          },
-          instructions: ''
+          }
         },
-        rideType,
-        notes: ''
+        rideType
       };
       console.log('Sending payload:', payload);
       const { ride } = await apiRequest('/api/rides/request', { method: 'POST', body: JSON.stringify(payload) });
