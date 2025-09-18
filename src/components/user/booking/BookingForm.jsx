@@ -45,7 +45,7 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
   const [scheduleLater, setScheduleLater] = useState(false);
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
-  const [rideType, setRideType] = useState('standard');
+  const [rideType, setRideType] = useState('economy');
   const [payment, setPayment] = useState('cash');
   const [promo, setPromo] = useState('');
   const [savingAs, setSavingAs] = useState('none');
@@ -85,7 +85,7 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
 
   const estimate = useMemo(() => {
     if (!pickup || !drop) return null;
-    const base = rideType === 'premium' ? 300 : rideType === 'shared' ? 120 : 200;
+    const base = rideType === 'premium' ? 300 : rideType === 'comfort' ? 250 : 200;
     const eta = rideType === 'premium' ? 10 : 15;
     return { fare: base, eta };
   }, [pickup, drop, rideType]);
@@ -284,9 +284,9 @@ export default function BookingForm({ onRideConfirmed, onRideToast, onGoLive }) 
       <div className="mt-4">
         <div className="text-sm font-medium text-gray-700">Ride options</div>
         <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-          <label className={`rounded-xl border ${rideType==='standard'?'border-black':'border-gray-200'} bg-white p-3 cursor-pointer hover:shadow-sm`}><input type="radio" name="ride" className="mr-2" checked={rideType==='standard'} onChange={()=>setRideType('standard')} />🚕 Standard</label>
-          <label className={`rounded-xl border ${rideType==='premium'?'border-black':'border-gray-200'} bg-white p-3 cursor-pointer hover:shadow-sm`}><input type="radio" name="ride" className="mr-2" checked={rideType==='premium'} onChange={()=>setRideType('premium')} />🚘 Premium</label>
-          <label className={`rounded-xl border ${rideType==='shared'?'border-black':'border-gray-200'} bg-white p-3 cursor-pointer hover:shadow-sm`}><input type="radio" name="ride" className="mr-2" checked={rideType==='shared'} onChange={()=>setRideType('shared')} />🚐 Shared/Pool</label>
+          <label className={`rounded-xl border ${rideType==='economy'?'border-black':'border-gray-200'} bg-white p-3 cursor-pointer hover:shadow-sm`}><input type="radio" name="ride" className="mr-2" checked={rideType==='economy'} onChange={()=>setRideType('economy')} />🚕 Economy</label>
+          <label className={`rounded-xl border ${rideType==='comfort'?'border-black':'border-gray-200'} bg-white p-3 cursor-pointer hover:shadow-sm`}><input type="radio" name="ride" className="mr-2" checked={rideType==='comfort'} onChange={()=>setRideType('comfort')} />🚘 Comfort</label>
+          <label className={`rounded-xl border ${rideType==='premium'?'border-black':'border-gray-200'} bg-white p-3 cursor-pointer hover:shadow-sm`}><input type="radio" name="ride" className="mr-2" checked={rideType==='premium'} onChange={()=>setRideType('premium')} />🚐 Premium</label>
         </div>
       </div>
 
