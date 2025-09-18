@@ -10,6 +10,7 @@ import ProfilePanel from './profile/ProfilePanel';
 import { RideHistoryList, RideHistoryDetail } from './history';
 import BookingForm from './booking/BookingForm';
 import PaymentToast from './notifications/PaymentToast';
+import { apiRequest } from '../../lib/api';
 
 export default function UserDashboard() {
   const [open, setOpen] = useState(true);
@@ -64,24 +65,21 @@ export default function UserDashboard() {
 
   const handlePayNow = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/payments/create-checkout-session', {
+      const data = await apiRequest('/api/payments/create-checkout-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: 20000, // ₹200 in paise
+          amount: 20000,
           currency: 'inr',
-          description: 'Ride payment'
+          description: 'Ride payment',
+          billingAddressCollection: 'required',
+          shippingAddressCollection: 'none',
+          successUrl: `${window.location.origin}/user/dashboard?payment=success`,
+          cancelUrl: `${window.location.origin}/user/dashboard?payment=cancel`
         })
       });
-      
-      const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert('Payment error: ' + (data.error || 'Unable to start payment'));
-      }
+      if (data.url) window.location.href = data.url; else alert('Payment error: ' + (data.error || 'Unable to start payment'));
     } catch (error) {
-      alert('Payment error: ' + error.message);
+      alert('Payment error: ' + (error?.data?.error || error.message));
     }
   };
 
